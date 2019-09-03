@@ -1,4 +1,4 @@
 # WEDC_Msc
 
-# [the demo](https://khouakhi.github.io/WEDC_Msc/scripts/)  
+# [the demo](https://htmlpreview.github.io/?https://github.com/khouakhi/WEDC_Msc/blob/master/scripts/index.html)  
 
