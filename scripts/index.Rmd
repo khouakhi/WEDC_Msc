@@ -1,0 +1,129 @@
+---
+title: "R demo WEDC Master's students"
+author: "A.Khouakhi"
+date: "December 1, 2017"
+output:
+  html_document:
+    highlight: haddock
+    theme: readable
+  pdf_document: default
+  word_document: default
+---
+
+### 1. Load the necessary libraries
+
+```{r, eval=T, echo=T,include=T,warning= F, message=F,cache=FALSE}
+
+library(tidyverse)
+library(GGally)
+library(tibbletime)
+library(kableExtra)
+library(lubridate)
+library(leaflet)
+```
+
+### 2. Load and read the data
+
+The data contains some rows that we don't need so we will skip them using the argument `skip`
+
+```{r, eval=T, echo=T,warning= F, message=F,cache=FALSE}
+# Data path
+data_path <- "water_level.csv"
+# Read the data 
+stage <- read_csv(data_path, skip = 21, progress = T) #skip = 21
+stage 
+```
+### 3. Tidying up the data 
+
+The variable names are not consistent so we are going to rename them using the rename function from the `dplyr` package  
+
+```{r, eval=T, echo=T}
+# Change variable names 
+stage <- rename(stage, st.4082 = s_15_4082.csv,
+         st.4086 = s_15_4086.csv,
+         st.4145 = s_4145.csv,
+         st.4161 = s_4161.csv, 
+         st.4174 = s_4174.csv,
+         st.4195 = s_4195.csv)
+```
+
+### 4. Analyses 
+As example we are going to compute the annual maximum water level for each gauging station and check if there is any trend
+
+```{r, eval=T, echo=T,warning= F, message=F,cache=FALSE}
+# Compute the annual maximum water level at each gauging station
+stage <- as_tbl_time(stage, date_time)
+
+ann_max <- stage %>% 
+  mutate(year =year(date_time)) %>% 
+  group_by(year) %>% 
+  summarise_all(funs(max))
+
+
+
+
+knitr::kable(ann_max, "html") %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed"))
+```
+
+### 5. Modelling and visualization 
+fit a linear regression model to the data, see if there is any correlation between different stations and so on
+
+```{r, eval=T, echo=T}
+
+# Plot the data and and fit linear regression line
+plot1 <- ann_max %>% gather("station", "stage", 3:8) %>% 
+  ggplot(., aes(date_time, stage))+
+  theme_bw()+
+  geom_point()+
+  geom_smooth(method = "lm", se=T, color="blue")+
+  facet_grid(station ~ ., scales = "free_y") 
+plot1
+# Add lines
+plot1 + geom_line()
+
+
+# Plot in small graphics
+plot1 + facet_wrap(~station)
+
+# Summary graphic 
+ggpairs(ann_max, columns = 3:8)
+
+# Correlation matrix 
+ggcorr(ann_max[, -1],label = TRUE,
+       label_alpha = TRUE)
+
+```
+
+### 6. Other visualization 
+
+
+```{r, eval=T, echo=T}
+
+# Plot in the same graphic   
+  clrs <-  colorRamps::primary.colors(6)
+  ann_max %>% gather("station", "stage", 3:8) %>% 
+    ggplot(.,aes(x = date_time, y = stage, colour = station))+
+    theme_bw()+
+    geom_line()+
+    geom_point()+
+    scale_color_manual(values = clrs)
+    
+
+```
+
+### 7. Mapping gauge locations
+Mapping station locations using interactive leaflet map 
+
+```{r, eval=T, echo=T,warning= F, message=F,cache=FALSE}
+
+# Read gauges coordinates 
+locations <- read_csv("gauges_coord.csv")
+
+leaflet(data = locations) %>% addTiles() %>%
+  addMarkers(~long, ~lat, popup = ~as.character(riverName),
+             label = ~as.character(riverName))
+    
+```
+
+
